@@ -11,3 +11,4 @@ receipts/
 *.sqlite
 *.db
 
+.venv-chatgpt-mcp/

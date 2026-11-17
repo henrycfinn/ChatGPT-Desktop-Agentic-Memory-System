@@ -1,14 +1,8 @@
 [CmdletBinding()]
-param(
-    [Parameter(Mandatory = $true)]
-    [string]$KnowledgeRoot
-)
-
+param([Parameter(Mandatory = $true)][string]$KnowledgeRoot)
 $ErrorActionPreference = 'Stop'
-$kitRoot = Split-Path -Parent $PSScriptRoot
-$adapter = Join-Path $kitRoot 'librarian\scripts\codex_librarian.py'
-if (-not (Test-Path -LiteralPath $adapter -PathType Leaf)) {
-    throw 'The bundled Librarian adapter is missing.'
-}
-python $adapter --knowledge-root $KnowledgeRoot doctor
-
+$repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$python = Join-Path $repo '.venv-chatgpt-mcp\Scripts\python.exe'
+if (-not (Test-Path -LiteralPath $python -PathType Leaf)) { throw 'Connector environment not found. Run scripts/setup.ps1 first.' }
+& $python (Join-Path $PSScriptRoot 'chatgpt_desktop_doctor.py') --knowledge-root $KnowledgeRoot
+exit $LASTEXITCODE

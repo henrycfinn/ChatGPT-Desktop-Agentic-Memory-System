@@ -1,54 +1,48 @@
-# Codex Obsidian Memory Kit
+# ChatGPT Desktop Agentic Memory System
 
-A local-first, reviewable memory system for Codex, Obsidian, and optional QMD retrieval.
+A local-first, read-only memory connector for ChatGPT Desktop and an existing Markdown or Obsidian knowledge base. QMD is optional search infrastructure; the Markdown files remain authoritative.
 
-It keeps Markdown in your Obsidian vault as the source of truth. The included Agentic Librarian governs durable writes: routine changes may apply automatically, while rewrites, deletions, control files, conflicts, and large batches are staged for review with receipts and stale-base protection.
+The connector exposes `search_memory`, `read_memory`, and `memory_status`. It does not write to the vault. Agentic Librarian, included in `librarian/`, is a separate governed-write component for supported local agents; this connector does not expose its write tools to ChatGPT.
 
-## What is included
+## Set up on Windows
 
-- `librarian/` — pinned Agentic Librarian source and Codex adapter.
-- `scripts/setup.ps1` — installs the Codex workflow and configures a local environment variable; it never writes into your vault.
-- `templates/` — safe starter instructions and an optional vault landing note.
-- `docs/` — architecture, QMD guidance, and operational boundaries.
-
-## Quick start (Windows)
-
-1. Clone this repository.
-2. Open PowerShell in the repository and run:
+1. Clone this repository and open PowerShell in its root. You need Python and pip.
+2. Prepare the connector against an existing knowledge directory:
 
    ```powershell
-   .\scripts\setup.ps1 -KnowledgeRoot C:\path\to\your\ObsidianVault
+   .\scripts\setup.ps1 -KnowledgeRoot C:\path\to\your\wiki
+   .\scripts\doctor.ps1 -KnowledgeRoot C:\path\to\your\wiki
    ```
 
-3. Start a new Codex task in a repository that contains the included `AGENTS.md` guidance, or paste the workflow from `templates/AGENTS.md` into your project's instructions.
-4. Ask Codex to improve a note. Durable vault writes are routed through the Librarian.
+3. Start the local connector, configure an OpenAI Secure MCP Tunnel and add the private MCP server in ChatGPT. Follow [the complete connection and security guide](docs/chatgpt-desktop.md).
+4. In ChatGPT, run `memory_status`, search a non-sensitive test note, and read the returned note. Only then is the end-to-end connection verified.
 
-The setup script copies the bundled `codex-librarian` skill into your Codex skills directory and sets `CODEX_LIBRARIAN_REPO` to this repository's `librarian` folder for your user account. Restart Codex after setup.
+Setup installs Python dependencies into a repository-local virtual environment and checks local tool registration. It does not create a tunnel, connect an account, store credentials, or change vault contents. The connector must run while ChatGPT uses it. Custom MCP server access depends on your workspace and Platform permissions.
 
-## The memory model
+## Memory and QMD
 
-| Layer | Responsibility |
+| Component | Role |
 | --- | --- |
-| Obsidian / Markdown | Canonical, human-readable memory |
-| Agentic Librarian | Governed writes, proposals, approvals, receipts, stale-base checks |
-| Codex | Research, synthesis, and tool use |
-| QMD (optional) | Retrieval and duplicate preflight; never authoritative |
+| Markdown / Obsidian | Canonical knowledge |
+| ChatGPT Desktop connector | Read-only search and retrieval |
+| QMD, optional | Local search index; filesystem search is the fallback |
+| Agentic Librarian, separate | Governed writes and review for supported local agents |
 
-See [architecture](docs/architecture.md) and [QMD guidance](docs/qmd.md).
+QMD indexing, the QMD CLI, and a Hermes `memory.provider` plugin are distinct. This project does not install a Hermes QMD provider or turn on automatic conversational recall. See [QMD guidance](docs/qmd.md), including the stale-index and provider diagnostics.
 
-## Safety promises
+## Boundaries
 
-- No hosted database, telemetry, or required account beyond the tools you already use.
-- No durable vault write bypasses the Librarian workflow.
-- Pending proposal bodies stay outside the vault, so unapproved text is not retrieved as memory.
-- QMD synchronization stays off unless you explicitly enable it.
-- The kit contains no vault contents, usernames, API keys, or machine-specific paths.
+- The HTTP service binds to loopback. No public proxy is set up by this project.
+- The default local HTTP mode requires a bearer token; the explicitly selected tunnel-only mode accepts unauthenticated loopback requests. Other local processes can reach that endpoint: use tunnel-only mode only in a trusted local environment and never expose it publicly.
+- The connector excludes application metadata and refuses paths outside its configured knowledge root. Search and read return vault content to the connected ChatGPT session; connect only a workspace you trust.
+- QMD synchronization is off unless you deliberately run or configure it. Pending proposals and receipts stay outside the indexed vault.
+- The bundled Librarian subtree retains its own upstream files, license and notices. It is not installed by the ChatGPT setup script.
 
-## Updating the included Librarian
+## Tests
 
-`librarian/` is a Git subtree pinned to a tested Agentic Librarian release. Refresh it deliberately after reviewing upstream release notes; do not edit its policy code independently in this repository.
+```powershell
+python scripts\run_tests.py
+python .\scripts\check_public_repo.py
+```
 
-## License
-
-MIT. The included Librarian subtree retains its own license and notices.
-
+MIT; the bundled Librarian retains its own license and notices.
